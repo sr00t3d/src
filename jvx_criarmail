@@ -1,17 +1,21 @@
 #!/bin/bash
 # ------------------------------------------------------------------------------
-# Script: jvx_criarmail
+# Script: jvx_alterarmail
 # Autor: Percio Andrade <percio@joinvix.com.br>
 #
-# GitHub: 
 # Changelog: 
 #
 # Solicitação em: sem solicitação - alta demanda chat
 # Projeto: https://app.clickup.com/90131580128/v/dc/2ky45h70-673/2ky45h70-6333
 #
-# Versão: 1.0.0
 # Data de criação: 31/07/2025
 # Última modificação: 31/07/2025
+#
+# Versão:
+# 1.0.0
+# \ Início do script
+# 1.0.1
+# \ Verificação de conta suspensa
 # ------------------------------------------------------------------------------
 #
 # Descrição:
@@ -73,13 +77,11 @@ fi
 
 # Verifica se o domínio resolve
 if ! getent hosts "${DOMINIO}" >/dev/null; then
-    echo "[!] - Domínio ${DOMINIO} não resolve"
+    echo "[!] Domínio ${DOMINIO} não resolve"
 fi
 
 # Verifica se o domínio esta cadastrado
-if grep -iE "^${DOMINIO}:" /etc/trueuserdomains >/dev/null; then
-    echo "Domínio ${DOMINIO} está cadastrado no servidor"
-else
+if ! awk -F: -v d="$DOMINIO" 'BEGIN{IGNORECASE=1} tolower($1)==tolower(d){found=1} END{exit !found}' /etc/trueuserdomains; then
     echo "[!] Domínio ${DOMINIO} NÃO está cadastrado no servidor"
     exit 1
 fi
@@ -89,6 +91,18 @@ USUARIO=$(/scripts/whoowns "${DOMINIO}")
 if [[ -z "${USUARIO}" ]]; then
     echo "[!] - Houve um problema ao obter o usuário do domínio."
     exit 1
+fi
+
+# Verifica se a conta está suspensa
+VERIFICA_CONTA=$(whmapi1 accountsummary user="${USUARIO}" 2>/dev/null \
+  | awk -F': ' '/^[[:space:]]*suspended:/{print $2+0; exit}')
+
+if [ -z "$VERIFICA_CONTA" ]; then
+  echo "${USUARIO}: Não foi possível obter o status (usuário pode não existir ou erro na API)"
+  exit 2
+elif [ "$VERIFICA_CONTA" -eq 1 ]; then
+  echo "[!] - A conta ${USUARIO} está suspensa e não terá a conta de email criada."
+  exit 1
 fi
 
 # checa existência do email (usando list_pops, sem parsing frágil)
