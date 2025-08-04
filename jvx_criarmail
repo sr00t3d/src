@@ -112,7 +112,7 @@ if uapi --user="${USUARIO}" Email list_pops domain="${DOMINIO}" | grep -qF "${EM
 fi
 
 # Executa a criação de conta de email usando uapi
-RESPONSE=$(uapi --user="${USUARIO}" Email add_pop email="${EMAIL}" domain="${DOMINIO}" password="${SENHA}" quota=250 --output=json)
+RESPONSE=$(uapi --user="${USUARIO}" Email add_pop email="${EMAIL}" domain="${DOMINIO}" password="${SENHA}" quota=0 --output=json)
 status=$(echo "$RESPONSE" | grep -oP '"status":\s*\K\d+')
 if [[ -z "$status" || "$status" -ne 1 ]]; then
     echo "[!] - Erro ao criar conta de email senha: ${RESPONSE}"
