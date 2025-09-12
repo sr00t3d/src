@@ -11,8 +11,8 @@ timeout /t 5 /nobreak >nul
 
 :: limpa/renova cache DNS (requer privilegios)
 ipconfig /flushdns
-#ipconfig /release
-#ipconfig /renew
+:: ipconfig /release
+:: ipconfig /renew
 
 set /p DOMINIO=Digite seu dominio completo (ex: dominio.com.br): 
 set "MAIL=mail.%DOMINIO%"
