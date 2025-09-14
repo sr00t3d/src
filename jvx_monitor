@@ -1,0 +1,68 @@
+#!/bin/bash
+# -------------------------------------------------------------------------------
+# Script: jvx_monitor
+# Autor: Percio Andrade <percio@joinvix.com.br>
+# Versão: 1.0
+# Descrição: Monitora o servidor durante 60 segundos (padrão) para identificar load alto
+# -------------------------------------------------------------------------------
+
+EMAIL=$1
+OUTFILE="monitor.txt"
+LOOP=$2
+IP=$(ip -4 addr show scope global | grep inet | awk '{print $2}' | cut -d/ -f1)
+LOAD_ATUAL=$(uptime | awk -F'load average: ' '{print $2}')
+
+if [[ $1 =~ ^(-h|-H)$ ]]; then
+    echo -e "Utilização:
+    jvx_monitor EMAIL SALTO
+
+Exemplo:
+    jvx_monitor percio@joinvix.com.br 10
+    "
+    exit
+fi
+
+# Verifica se o e-mail foi passado
+if [[ -z $EMAIL ]]; then
+    echo "O email não pode ficar em branco"
+    echo "Uso: jvx_monitor EMAIL SALTO"
+    exit 1
+fi
+
+# Seta 60 padrão caso não exista definição
+if [[ -z $LOOP ]]; then
+    LOOP="60"
+fi
+
+echo "
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⢴⣃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⢴⣫⢗⡯⡖⠀⠀⠀⠀⠀⢠⡄⠀⠀⠀⠀⠀⠀⠀⠀⢠⡤⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⢨⢷⡹⢮⣳⠇⠀⠀⠀⠀⠀⠈⠁⠀⠀⠀⠀⠀⠀⠀⠀⠈⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠠⠐⣀⠂⡀⢸⢧⡻⣝⢮⡏⠀⠀⠀⠀⠀⢸⡇⢀⣾⠟⠿⠻⠿⣷⠀⢸⣏⠀⣿⡟⠿⠻⠿⣶⡀⢸⣿⠀⠀⠀⢀⣿⠃⢸⡏⠀⠙⢿⣦⣀⣼⡟⠁⠀⠀
+⠀⠀⠤⠑⡈⢡⠀⠆⡁⢢⣉⠓⢯⡳⡇⠀⠀⠀⠀⠀⢸⡇⠨⣿⠀⠀⠀⠀⣿⡁⢸⡧⠀⣿⡂⠀⠀⠀⢿⡃⢸⡷⠀⠀⢠⣾⠋⠀⢸⡗⠀⠀⠀⣹⣿⣇⠀⠀⠀⠀
+⠀⠀⠀⠀⠁⠂⡌⠐⡄⢡⠢⡙⢤⠉⠇⠀⠀⠀⠀⠀⢸⡇⠈⣿⣤⣤⣤⣴⡿⠁⢸⡧⠀⣿⡅⠀⠀⠀⢿⡇⢘⣿⣤⡾⠟⠁⠀⠀⢸⡧⠀⢠⣾⠟⠈⢻⣦⡀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠡⠐⢨⡑⠘⠀⠀⠀⠀⠀⠀⠀⠀⣸⡇⠀⠀⠉⠉⠉⠈⠁⠀⠈⠁⠀⠉⠀⠀⠀⠀⠉⠁⠀⠉⠁⠀⠀⠀⠀⠀⠈⠁⠀⠉⠁⠀⠀⠀⠉⠉⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠿⠻⠟⠟⠁⠀Monitor de load⠀- Servidor [$(hostname)] [${IP}]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+"
+echo "Iniciando monitoramento de $LOOP saltos no servidor, um relatorio será enviado para $EMAIL"
+echo "O load atual do servidor é $LOAD_ATUAL"
+
+{
+echo "---------------------------------------------------------------------------------------------"
+printf "%-8s | %-10s | %-50s | %-5s | %-10s\n" "PID" "User" "Arquivo" "LOAD" "TEMPO EXEC"
+echo "---------------------------------------------------------------------------------------------"
+
+for i in $(seq 1 $LOOP); do
+    ps -eo user,pid,pcpu,etime,args --sort=-pcpu | grep '[p]hp' | while read -r user pid load etime arquivo_rest; do
+        arquivo=$(echo "$arquivo_rest" | cut -c1-50)
+        printf "%-8s | %-10s | %-50s | %-5s | %-10s\n" "$pid" "$user" "$arquivo" "$load" "$etime"
+    done
+    echo "Loop $i"
+    echo "Hostname: $(hostname)"
+    sleep 0.5
+done
+} >> "$OUTFILE"
+
+cat "$OUTFILE" | mail -s "Monitor: $(hostname)" "$EMAIL"
+rm -f "$OUTFILE"
+echo "Monitoramento finalizado"
