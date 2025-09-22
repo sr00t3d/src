@@ -25,7 +25,7 @@ echo "sendo utilizado $TMP_USED, disponível $TMP_AVAIL ($TMP_PERCENT)."
 
 # Se alertas estiverem ativados, verifica limite
 if [[ "$TMP_ALERT" == true ]]; then
-    if (( TMP_PERCENT_VAL >= 0 )); then
+    if (( TMP_PERCENT_VAL >= 80 )); then
         echo "⚠️  ALERTA: O /tmp está acima de 80% de uso!"
         TMP_SIZE_ALERT=true
     else
