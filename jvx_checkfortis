@@ -1,9 +1,19 @@
 #!/bin/bash
 ######################################
 # Author: Percio Andrade
-# Version: 9.0
+# Version: 9.0.1
 # Info: Check if domains point to Fortis IPs with progress
 ######################################
+
+# Gera arquivo de dominios
+DOMAIN_GET=$(grep -hPo '(?<=^domain=).*' /usr/local/directadmin/data/users/*/user.conf > dominio-fortis.txt)
+
+if [[ ! -f dominio-fortis.txt ]]; then
+        echo "Lista de domínios não encontrada, gerando"
+        grep -hPo '(?<=^domain=).*' /usr/local/directadmin/data/users/*/user.conf > dominio-fortis.txt
+else
+        echo "Utilizando a lista de domínios em $(pwd)/dominio-fortis.txt"
+fi
 
 # Lista de IPs da Fortis (ajuste aqui os IPs corretos)
 FORTIS_IPS=("148.113.217.151")
