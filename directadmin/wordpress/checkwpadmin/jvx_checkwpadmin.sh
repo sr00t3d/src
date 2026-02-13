@@ -2,6 +2,10 @@
 
 # --- CONFIGURAÇÕES ---
 EMAIL_DESTINO="leandro.ruthes@joinvix.com.br"
+# Adicione os e-mails permitidos separados por ESPAÇO.
+# Exemplo: "email1@dominio.com email2@dominio.com"
+WHITELIST_EMAILS="root@joinvix.com.br dev@joinvix.com.br" 
+
 ARQUIVO_CSV="relatorio_admins_wp_$(date +%Y%m%d).csv"
 # ---------------------
 
@@ -16,59 +20,68 @@ TOTAL=$((TOTAL - 1))
 CURRENT=0
 
 echo "Iniciando auditoria inteligente em $TOTAL contas..."
-echo "Ignorando admins com e-mails: root@joinvix.com.br e dev@joinvix.com.br"
+echo "Ignorando admins listados na Whitelist..."
 echo "----------------------------------------------------------------"
 
 for user_dir in /home/*; do
     ((CURRENT++))
     user=$(basename "$user_dir")
-    wp_path="${user_dir}/public_html"
+    wp_path="${user_dir}/public_html" # Ajuste se o caminho for diferente (ex: domains/domain/public_html)
     
-    # Barra de progresso
-    PERCENT=$(( (CURRENT * 100) / TOTAL ))
+    # Barra de progresso visual
+    if [ "$TOTAL" -gt 0 ]; then
+        PERCENT=$(( (CURRENT * 100) / TOTAL ))
+    else
+        PERCENT=0
+    fi
     printf "\r[%-3d%%] Processando: %-25s" "$PERCENT" "$user"
 
-    # Verifica se é WordPress válido
+    # Verifica se é WordPress válido (tem pasta e config)
     if [ -d "$wp_path" ] && [ -f "$wp_path/wp-config.php" ]; then
         
-        # Resgata domínio
-        domain=$(grep "domain=" /usr/local/directadmin/data/users/"$user"/user.conf 2>/dev/null | cut -d= -f2 | head -n1)
+        # Tenta resgatar domínio principal do user.conf do DirectAdmin
+        # Se falhar, usa o nome do usuário como fallback
+        if [ -f "/usr/local/directadmin/data/users/$user/user.conf" ]; then
+            domain=$(grep "domain=" /usr/local/directadmin/data/users/"$user"/user.conf 2>/dev/null | cut -d= -f2 | head -n1)
+        fi
         [ -z "$domain" ] && domain=$user
 
-        # Obtém lista bruta de admins (Login e Email) em formato CSV
-        # output esperado:
-        # user_login,user_email
-        # admin,cliente@gmail.com
-        # dev,dev@joinvix.com.br
+        # Obtém lista bruta de admins (Login e Email) via WP-CLI
+        # --skip-plugins/themes previne erros fatais de PHP
         RAW_DATA=$(sudo -u "$user" -- "$WP_BIN" user list --role=administrator --fields=user_login,user_email --format=csv --skip-plugins --skip-themes --path="$wp_path" 2>/dev/null)
 
         # Variáveis de controle para este site
         CONTAGEM=0
         LISTA_ADMINS=""
 
-        # Lê a saída linha por linha (pulando o cabeçalho se houver dados)
+        # Lê a saída linha por linha
         if [ -n "$RAW_DATA" ]; then
-            # 'tail -n +2' pula a primeira linha (cabeçalho user_login,user_email)
+            # 'tail -n +2' remove o cabeçalho do CSV gerado pelo WP-CLI
             while IFS=, read -r login email; do
-                # Remove espaços em branco e caracteres invisíveis (carriage return)
+                # Limpeza de caracteres invisíveis
                 login=$(echo "$login" | tr -d '\r')
                 email=$(echo "$email" | tr -d '\r')
 
-                # CONDICIONAL DE FILTRO (ALLOWLIST)
-                if [[ "$email" != "root@joinvix.com.br" && "$email" != "dev@joinvix.com.br" ]]; then
-                    # Se NÃO for da JoinVix, adiciona na lista e conta
+                # --- LÓGICA DE WHITELIST DINÂMICA ---
+                # Verifica se o e-mail atual NÃO está contido na string WHITELIST_EMAILS
+                # Os espaços extras " $var " garantem que não pegue substrings parciais indesejadas
+                if [[ ! " $WHITELIST_EMAILS " =~ " $email " ]]; then
+                    
                     ((CONTAGEM++))
+                    
+                    # Formata a string de saída
                     if [ -z "$LISTA_ADMINS" ]; then
                         LISTA_ADMINS="$login ($email)"
                     else
                         LISTA_ADMINS="$LISTA_ADMINS; $login ($email)"
                     fi
                 fi
+                # ------------------------------------
+
             done <<< "$(echo "$RAW_DATA" | tail -n +2)"
         fi
 
-        # LÓGICA FINAL DO RELATÓRIO
-        # Só adiciona no CSV se tiver encontrado admins "estranhos" (Contagem > 0)
+        # Só grava no relatório se houver admins suspeitos
         if [ "$CONTAGEM" -gt 0 ]; then
             echo "$domain,$CONTAGEM,\"$LISTA_ADMINS\"" >> "$ARQUIVO_CSV"
         fi
@@ -82,8 +95,8 @@ echo "Relatório salvo em: $ARQUIVO_CSV"
 if command -v mail &> /dev/null; then
     echo "Enviando relatório para $EMAIL_DESTINO..."
     
-    SUBJECT="Relatório de Admins WP (Filtrado) - $(hostname)"
-    BODY="Segue anexo relatório de sites com administradores ALÉM dos padrões da JoinVix (dev/root)."
+    SUBJECT="Relatório de Auditoria WP - Admins Suspeitos - $(hostname)"
+    BODY="Segue em anexo relatório de sites contendo administradores que NÃO estão na whitelist ($WHITELIST_EMAILS)."
     
     # Envia com anexo (-a)
     echo "$BODY" | mail -s "$SUBJECT" -a "$ARQUIVO_CSV" "$EMAIL_DESTINO"
@@ -94,5 +107,5 @@ if command -v mail &> /dev/null; then
         echo "Falha ao enviar o e-mail."
     fi
 else
-    echo "ATENÇÃO: Comando 'mail' não encontrado."
+    echo "ATENÇÃO: Comando 'mail' não encontrado. Instale o pacote mailx ou postfix."
 fi
