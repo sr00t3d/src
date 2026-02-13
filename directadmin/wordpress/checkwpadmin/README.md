@@ -1,6 +1,6 @@
 # 🚀 JVX Check WP-Admin
 
-O jvx_checkwpadmin.sh é uma ferramenta de auditoria de segurança desenvolvida para servidores DirectAdmin. O seu objetivo crítico é varrer todas as contas de usuário, identificar instalações WordPress e listar usuários com privilégios de Administrador que não fazem parte da whitelist da equipe (ex: root@joinvix ou dev@joinvix).
+O jvx_checkwpadmin.sh é uma ferramenta de auditoria de segurança desenvolvida para servidores DirectAdmin. O seu objetivo crítico é varrer todas as contas de usuário, identificar instalações WordPress e listar usuários com privilégios de Administrador que não fazem parte da whitelist da equipe (ex: root@dominio ou dev@dominio).
 
 Ideal para identificar contas administrativas suspeitas, esquecidas ou criadas por invasores em servidores compartilhados.
 
@@ -10,7 +10,7 @@ Ideal para identificar contas administrativas suspeitas, esquecidas ou criadas p
 - **Detecção de WordPress**: Valida se o diretório contém uma instalação WP ativa.
 - **Auditoria de Admins (WP-CLI)**: Utiliza wp user list para extrair usuários com a role administrator.
 - **Modo de Segurança**: Executa comandos com --skip-plugins e --skip-themes para garantir que a auditoria funcione mesmo em sites com erros fatais ou conflitos.
-- **Whitelist Inteligente**: Ignora usuários administrativos padrão da infraestrutura (ex: *`@joinvix.com.br`), focando apenas em usuários desconhecidos.
+- **Whitelist Inteligente**: Ignora usuários administrativos padrão da infraestrutura (ex: *`@dominio.com.br`), focando apenas em usuários desconhecidos.
 - **Relatório CSV**: Gera um arquivo `.csv` consolidado com: `Data`, `Usuário DA`, `Domínio`, `Total Admins Suspeitos`, `Lista de Logins`.
 - **Feedback Visual**: Exibe uma barra de progresso durante a execução no terminal.
 - **Alerta por E-mail**: Envia o relatório final automaticamente para o e-mail configurado.
@@ -34,8 +34,8 @@ Edite o cabeçalho do script para ajustar a whitelist de e-mails ou o destinatá
 
 ```bash
 # Exemplo de variáveis internas
-EMAIL_REPORT="seu-email@joinvix.com.br"
-WHITELIST_EMAILS="root@joinvix.com.br|dev@joinvix.com.br"
+EMAIL_REPORT="seu-email@dominio.com.br"
+WHITELIST_EMAILS="root@dominio.com.br dev@dominio.com.br"
 ```
 
 3. Execução
