@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # --- CONFIGURAÇÕES ---
-EMAIL_DESTINO="leandro.ruthes@joinvix.com.br"
+EMAIL_DESTINO="email@dominio.com.br"
 # Adicione os e-mails permitidos separados por ESPAÇO.
 # Exemplo: "email1@dominio.com email2@dominio.com"
-WHITELIST_EMAILS="root@joinvix.com.br dev@joinvix.com.br" 
+WHITELIST_EMAILS="root@dominio.com.br dev@dominio.com.br" 
 
 ARQUIVO_CSV="relatorio_admins_wp_$(date +%Y%m%d).csv"
 # ---------------------
